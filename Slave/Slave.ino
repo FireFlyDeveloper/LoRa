@@ -3,22 +3,22 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
-// LoRa Pin Configuration (Updated for your setup)
-#define LORA_NSS  10  // GPIO10 - Chip Select
-#define LORA_RST  8   // GPIO8  - Reset
-#define LORA_DIO0 7   // GPIO7  - Interrupt
-#define LORA_MOSI 3   // GPIO3  - MOSI
-#define LORA_MISO 2   // GPIO2  - MISO
-#define LORA_SCK  6   // GPIO6  - SCK
+// LoRa Pin Configuration for NodeMCU-ESP32 (38-pin)
+#define LORA_NSS  5   // GPIO5  - Chip Select (CS)
+#define LORA_RST  14  // GPIO14 - Reset
+#define LORA_DIO0 26   // GPIO2  - Interrupt
+#define LORA_MOSI 23  // GPIO23 - MOSI
+#define LORA_MISO 19  // GPIO19 - MISO
+#define LORA_SCK  18  // GPIO18 - SCK
 
 // LCD Configuration (I2C 20x4)
 LiquidCrystal_I2C lcd(0x27, 20, 4);  // Address 0x27, 20 columns, 4 rows
 
 // Alarm & Lights Pin Configuration
 #define HORN_PIN   4   // GPIO4 - Horn/Buzzer
-#define GREEN_PIN  5   // GPIO5 - Green LED (Low water level)
-#define YELLOW_PIN 1   // GPIO1 - Yellow LED (Medium water level)
-#define RED_PIN    0   // GPIO0 - Red LED (High water level)
+#define GREEN_PIN  15  // GPIO15 - Green LED (Low water level)
+#define YELLOW_PIN 13  // GPIO13 - Yellow LED (Medium water level)
+#define RED_PIN    12  // GPIO12 - Red LED (High water level)
 
 // LoRa Addresses
 byte LocalAddress = 0x02;       // Slave address
@@ -33,7 +33,7 @@ void setup() {
   while (!Serial);
 
   // Initialize LCD
-  Wire.begin(21, 20); // SDA=GPIO21, SCL=GPIO20
+  Wire.begin(21, 22); // SDA=GPIO21, SCL=GPIO22 (standard I2C pins for ESP32)
   lcd.init();
   lcd.backlight();
   lcd.clear();
@@ -66,10 +66,10 @@ void setup() {
   pinMode(RED_PIN, OUTPUT);
 
   // Ensure all outputs are OFF initially
-  digitalWrite(HORN_PIN, LOW);
-  digitalWrite(GREEN_PIN, LOW);
-  digitalWrite(YELLOW_PIN, LOW);
-  digitalWrite(RED_PIN, LOW);
+  digitalWrite(HORN_PIN, HIGH);
+  digitalWrite(GREEN_PIN, HIGH);
+  digitalWrite(YELLOW_PIN, HIGH);
+  digitalWrite(RED_PIN, HIGH);
 }
 
 void loop() {
@@ -81,7 +81,7 @@ void loop() {
   // Check if buzzer has been on for more than 3 minutes
   if (digitalRead(HORN_PIN)) {
     if (millis() - buzzerStartTime >= buzzerDuration) {
-      digitalWrite(HORN_PIN, LOW); // Turn off buzzer
+      digitalWrite(HORN_PIN, HIGH); // Turn off buzzer
     }
   }
 }
@@ -115,26 +115,26 @@ void onReceive(int packetSize) {
   String warning = "invalid";
 
   // Reset all outputs first
-  digitalWrite(GREEN_PIN, LOW);
-  digitalWrite(YELLOW_PIN, LOW);
-  digitalWrite(RED_PIN, LOW);
+  digitalWrite(GREEN_PIN, HIGH);
+  digitalWrite(YELLOW_PIN, HIGH);
+  digitalWrite(RED_PIN, HIGH);
 
   switch(data) {
     case 1: // 33% - Low level (Green light)
       waterLevel = "33%";
       warning = "low";
-      digitalWrite(GREEN_PIN, HIGH);
+      digitalWrite(GREEN_PIN, LOW);
       break;
     case 2: // 66% - Medium level (Yellow light)
       waterLevel = "66%";
       warning = "medium";
-      digitalWrite(YELLOW_PIN, HIGH);
+      digitalWrite(YELLOW_PIN, LOW);
       break;
     case 3: // 99% - High level (Red light + Horn alarm)
       waterLevel = "99%";
       warning = "dangerous";
-      digitalWrite(RED_PIN, HIGH);
-      digitalWrite(HORN_PIN, HIGH); // Activate horn
+      digitalWrite(RED_PIN, LOW);
+      digitalWrite(HORN_PIN, LOW); // Activate horn
       buzzerStartTime = millis();   // Record activation time
       break;
   }
